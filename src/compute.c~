@@ -1,0 +1,227 @@
+
+#include "compute.h"
+#include "graphics.h"
+#include "debug.h"
+#include "ocl.h"
+#include <unistd.h>
+#include <omp.h>
+
+#include <stdbool.h>
+
+//KERNEL=scrollup ./prog -v 2 -s 1024 
+
+unsigned version = 0;
+
+void first_touch_v1 (void);
+void first_touch_v2 (void);
+
+unsigned compute_v0 (unsigned nb_iter);
+unsigned compute_v1 (unsigned nb_iter);
+unsigned compute_v2 (unsigned nb_iter);
+unsigned compute_v3 (unsigned nb_iter);
+
+void_func_t first_touch [] = {
+  NULL,
+  first_touch_v1,
+  first_touch_v2,
+  NULL,
+};
+
+int_func_t compute [] = {
+  compute_v0,
+  compute_v1,
+  compute_v2,
+  compute_v3,
+};
+
+char *version_name [] = {
+  "Séquentielle",
+  "OpenMP for simple",
+  "OpenMP for avec tuile",
+  "OpenCL",
+};
+
+unsigned opencl_used [] = {
+  0,
+  0,
+  0,
+  1,
+};
+
+///////////////////////////// Version séquentielle simple
+
+
+unsigned compute_v0 (unsigned nb_iter)
+{
+  int alive = 0;
+  for (unsigned test = 1; test <= nb_iter; test++) {
+    for (int i = 1; i < DIM-1; i++)
+      for (int j = 1; j < DIM-1; j++){
+	
+	alive = (cur_img(i-1, j-1) !=0)
+	  + (cur_img(i-1, j) != 0)
+	  + (cur_img(i+1, j-1) != 0)
+	  + (cur_img(i, j-1) != 0)
+	  + (cur_img(i, j+1) != 0)
+	  + (cur_img(i-1, j+1) != 0)
+	  + (cur_img(i+1, j) != 0)
+	  + (cur_img(i+1, j+1) !=0);
+
+	if(cur_img(i,j) != 0){
+	  if ((alive == 2) || (alive == 3))
+	    next_img(i,j) = 0xFFFF00FF;
+	  else
+	    next_img(i,j) = 0;
+	}
+	else{
+	  if(alive == 3)
+	    next_img(i,j) = 0xFFFF00FF;
+	  else
+	    next_img(i,j) = 0;
+	}
+	
+
+	alive = 0;
+	
+      }
+      
+    
+    swap_images ();
+    }
+  return 0;
+}
+
+
+///////////////////////////// Version OpenMP de base
+
+void first_touch_v1 ()
+{
+  
+}
+
+// Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
+unsigned compute_v1(unsigned nb_iter)
+{
+  int alive = 0;
+#pragma omp parallel private(alive)
+  {
+    
+    for (unsigned it = 1; it <= nb_iter; it++) {
+#pragma omp for 
+      for (int i = 1; i < DIM-1; i++){
+	//printf("Je suis le thread n: %d\n", omp_get_thread_num());
+	for (int j = 1; j < DIM-1; j++){
+	 
+	  alive = (cur_img(i-1, j-1) !=0)
+	    + (cur_img(i-1, j) != 0)
+	    + (cur_img(i+1, j-1) != 0)
+	    + (cur_img(i, j-1) != 0)
+	    + (cur_img(i, j+1) != 0)
+	    + (cur_img(i-1, j+1) != 0)
+	    + (cur_img(i+1, j) != 0)
+	    + (cur_img(i+1, j+1) !=0);
+
+	  if(cur_img(i,j) != 0){
+	  if ((alive == 2) || (alive == 3)){
+#pragma omp atomic
+	  next_img(i,j) = 0xFFFF00FF;
+	}
+	  else{
+	    #pragma omp atomic
+	      next_img(i,j) = 0;
+	}
+	}
+	  else{
+	    if(alive == 3)
+	      #pragma omp atomic
+	      next_img(i,j) = 0xFFFF00FF;
+	    else
+	      #pragma omp atomic
+	      next_img(i,j) = 0;
+	  }
+	
+
+	  alive = 0;
+	  
+	 
+	}
+	
+      }
+      #pragma omp barrier
+      
+      
+    
+      swap_images ();
+     }
+  }
+  return 0;  
+}
+
+
+
+///////////////////////////// Version OpenMP avec tuile
+
+void first_touch_v2 ()
+{
+
+}
+
+// Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
+unsigned compute_v2(unsigned nb_iter)
+{
+   int alive = 0;
+#pragma omp parallel
+  {
+    
+    for (unsigned it = 1; it <= nb_iter; it++) {
+#pragma omp for collapse(4)
+      for (int i = 1; i < DIM-1; i=i+32){
+	//printf("Je suis le thread n: %d\n", omp_get_thread_num());
+	for (int j = 1; j < DIM-1; j=j+32){
+	  for (int x = 1; x < 32; x++){
+	    for (int y = 1; y < 32; y++){
+	  
+	      alive = (cur_img(x-1, y-1) !=0)
+		+ (cur_img(x-1, y) != 0)
+		+ (cur_img(x+1, y-1) != 0)
+		+ (cur_img(x, y-1) != 0)
+		+ (cur_img(x, y+1) != 0)
+		+ (cur_img(x-1, y+1) != 0)
+		+ (cur_img(x+1, y) != 0)
+		+ (cur_img(x+1, y+1) !=0);
+
+	      if(cur_img(x,y) != 0){
+		if ((alive == 2) || (alive == 3))
+		  next_img(x,y) = 0xFFFF00FF;
+		else
+		  next_img(x,y) = 0;
+	      }
+	      else{
+		if(alive == 3)
+		  next_img(x,y) = 0xFFFF00FF;
+		else
+		  next_img(x,y) = 0;
+	      }
+	
+
+	      alive = 0;
+	
+	    }
+	  }
+	}
+      }
+    
+      swap_images ();
+    }
+   }
+  return 0;  
+}
+
+
+///////////////////////////// Version OpenCL
+
+// Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
+unsigned compute_v3 (unsigned nb_iter)
+{
+  return ocl_compute (nb_iter);
+}
