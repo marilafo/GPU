@@ -26,7 +26,10 @@ unsigned compute_v5 (unsigned nb_iter);
 unsigned compute_v6 (unsigned nb_iter);
 unsigned compute_v7 (unsigned nb_iter);
 unsigned compute_v8 (unsigned nb_iter);
-
+unsigned compute_v9 (unsigned nb_iter);
+unsigned compute_v10 (unsigned nb_iter);
+unsigned compute_v11 (unsigned nb_iter);
+unsigned compute_v12 (unsigned nb_iter);
 
 
 
@@ -52,6 +55,10 @@ int_func_t compute [] = {
   compute_v6,
   compute_v7,
   compute_v8,
+  compute_v9,
+  compute_v10, 
+  compute_v11,
+  compute_v12,
 };
 
 char *version_name [] = {
@@ -64,6 +71,10 @@ char *version_name [] = {
   "OpenMP for optimisé",
   "OpenMP task tuiléé",
   "OpenMP task optimisé",
+  "OpenMP for simple static"
+  "OpenMP for tuile static"
+  "OpenMP for oprimisé static"
+  "OpenCL"
 };
 
 unsigned opencl_used [] = {
@@ -76,6 +87,10 @@ unsigned opencl_used [] = {
   0,
   0,
   0,
+  0,
+  0,
+  0,
+  1,
 };
 
 ///////////////////////////// Version séquentielle simple
@@ -535,4 +550,138 @@ unsigned compute_v8 (unsigned nb_iter)
    	swap_images ();
 
   return cont;
+}
+
+
+/////////////////////OMP for simple scheduled(static)
+
+unsigned compute_v9(unsigned nb_iter)
+{
+	#pragma omp parallel
+	{
+		#pragma omp for 
+	  	for (unsigned test = 1; test <= nb_iter; test++) {
+		   	#pragma omp parallel for collapse(2) schedule(static, 1)
+		   	for (int i = 1; i < DIM-1; i++)
+		   		for (int j = 1; j < DIM-1; j++){
+					calcul_vie(i,j);
+		
+	   		}
+    	}
+    }
+    swap_images ();
+  return 0; 
+}
+
+//////////////////OMP for tuilé schedule static 
+unsigned jeu_vie_v10 (int a, int b)
+{
+
+	int ret[4];
+   	get_tuile(ret, a, b);
+   	
+   	#pragma omp parallel
+   	{
+   		
+
+  		#pragma omp for collapse(2) schedule(static, 1)
+    	for (int i = ret[0]; i <= ret[2]; i++)
+	    	for (int j = ret[1]; j <= ret[3]; j++){
+				calcul_vie(i,j);
+			
+	    }
+	} 
+  	return 0;
+}
+
+
+// Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
+unsigned compute_v10 (unsigned nb_iter)
+{ 
+  	tranche = DIM / GRAIN;
+
+  	#pragma omp parallel for
+  	for (unsigned test = 1; test <= nb_iter; test++) 
+  	{
+  		cont = 0;
+  		#pragma omp parallel for collapse(2) schedule(static, 1)
+  		for (int i=0; i < GRAIN; i++)
+    		for (int j=0; j < GRAIN; j++){
+      			jeu_vie_v10 (i, j);
+    		}
+	}
+   	swap_images ();
+
+  return cont;
+}
+
+//////////////////////////////////OMP for optimisé static
+
+unsigned jeu_vie_v11 (int a, int b)
+{
+	int ret[4];
+   	get_tuile(ret, a, b);
+
+	#pragma omp parallel
+   	{
+   		#pragma omp for collapse(2) schedule(static, 1)
+    	for (int i = ret[0]; i <= ret[2]; i++)
+		    for (int j = ret[1]; j <= ret[3]; j++){
+				calcul_vie(i,j);
+			
+	    }
+	}
+    
+   	if(test_matrice == 1)
+	    cellule[a][b] = 1;
+	else
+	    cellule[a][b] = 0;
+
+  	return 0;
+}
+
+// Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
+unsigned compute_v11 (unsigned nb_iter)
+{ 
+  	tranche = DIM / GRAIN;
+  	#pragma omp parallel
+  	{
+  	#pragma omp for
+  	for (unsigned test = 1; test <= nb_iter; test++) {
+  		cont = 0;
+
+  		#pragma omp parallel for collapse(2) schedule(static, 1)
+  		for (unsigned m = 0 ; m < GRAIN ; m++){
+  			for(unsigned n = 0; n < GRAIN ; n++){
+  				#pragma omp critical
+  				cellule[m][n] = 1;
+  			}
+  		}
+
+  		#pragma omp parallel for collapse(2) schedule(static, 1)
+  		for (int i=0; i < GRAIN; i++)
+    		for (int j=0; j < GRAIN; j++){
+    			if(cellule[i][j] == 0 
+	    			&& cellule[i][j-1] == 0 
+	    			&& cellule[i][j+1] == 0 
+	    			&& cellule[i-1][j] == 0
+	    			&& cellule[i+1][j] == 0
+	    			&& cellule[i-1][j-1] == 0
+	    			&& cellule[i-1][j+1] == 0 
+	    			&& cellule[i+1][j-1] == 0
+	    			&& cellule[i+1][j+1] == 0 )
+	    			continue;
+	    		test_matrice = 0;
+      			jeu_vie_v11 (i, j);
+    		}
+	}
+	}	
+   	swap_images ();
+
+  return cont;
+}
+
+/////////////////////////Implémentation OPENCL
+unsigned compute_v12(unsigned nb_iter){
+	return ocl_compute(nb_iter);
 }

@@ -1,3 +1,47 @@
+__kernel void vie_base(__global unsigned *in, __global unsigned *out){
+  int y = get_global_id (1);
+  int x = get_global_id (0);
+
+  int couleur = 0;
+  if(in[(y-1) * DIM + (x-1)] != 0)
+    couleur ++;
+  if(in[(y-1) * DIM +x] != 0)
+    couleur ++;
+  if(in[(y-1) * DIM + (x+1)] != 0)
+    couleur ++;
+
+  if(in[(y+1) * DIM + (x-1)] != 0)
+    couleur ++;
+  if(in[(y+1) * DIM + x] != 0)
+    couleur ++;
+  if(in[(y+1) * DIM + (x+1)] != 0)
+    couleur ++;
+
+
+  if(in[y * DIM + (x-1)] != 0)
+    couleur ++;
+  if(in[y * DIM + (x+1)] != 0)
+    couleur ++;
+
+  
+
+  
+  if (in [y * DIM + x] == 0){
+    if(couleur == 2 || couleur == 3)
+      out[y * DIM + x] = 0xFFFF00FF; // will be yellow
+    else
+      out[y * DIM + x] = 0;
+  }
+  else
+    if(couleur == 3)
+      out[y * DIM + x] = 0xFFFF00FF;
+    else
+      out[y * DIM + x] = 0;
+
+
+}
+
+
 __kernel void transpose_naif (__global unsigned *in, __global unsigned *out)
 {
   int x = get_global_id (0);
