@@ -3,6 +3,8 @@
 #include "graphics.h"
 #include "debug.h"
 #include "ocl.h"
+#include <stdlib.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <omp.h>
 
@@ -399,18 +401,19 @@ unsigned compute_v6 (unsigned nb_iter)
 
 //////////////////////////version OMP TASK tuilée
 
+int cell[GRAIN][GRAIN];
+
+
 unsigned jeu_vie_v7 (int a, int b)
 {
 	int ret[4];
 	get_tuile(ret, a, b);
-	
-	#pragma omp parallel
    	{
-
-    	for (int i = ret[0]; i <= ret[2]; i++)
+    	for (int i = ret[0]; i <= ret[2]; i++){
 		    for (int j = ret[1]; j <= ret[3]; j++){
 				calcul_vie(i,j);
 		    }
+		}
 	}
   	return 0;
 }
@@ -423,10 +426,31 @@ unsigned compute_v7 (unsigned nb_iter)
 
   	for (unsigned test = 1; test <= nb_iter; test++) {
   		cont = 0;
-  		for (int i=0; i < GRAIN; i++)
-    		for (int j=0; j < GRAIN; j++){
-      			jeu_vie_seq (i, j);
-    		}
+
+  		#pragma omp parallel
+  		{
+  			#pragma omp single
+	  		for (int i=0; i < GRAIN; i++){
+	    		for (int j=0; j < GRAIN; j++){
+	    			if(i==0 && j==0)
+	    				#pragma omp task firstprivate(i,j) depend(out:cell[i][j])
+						jeu_vie_v7 (i, j);
+					else if(i==0)
+						#pragma omp task firstprivate(i,j) depend(out:cell[i][j]) depend(in:cell[i][j-1])
+						jeu_vie_v7 (i, j);
+					else if(j==0)
+						#pragma omp task firstprivate(i,j) depend(out:cell[i][j]) depend(in:cell[i-1][j]) 
+						jeu_vie_v7 (i, j);
+					else
+						#pragma omp task firstprivate(i,j) depend(out:cell[i][j]) depend(in:cell[i-1][j], cell[i][j-1]) 
+						jeu_vie_v7 (i, j);
+
+	    		}
+	    	}
+    	}
+	
+
+
 	}
    	swap_images ();
   return cont;
@@ -434,7 +458,81 @@ unsigned compute_v7 (unsigned nb_iter)
 
 //////////////////////////version OMP TASK optimisé
 
+
+unsigned jeu_vie_v8 (int a, int b)
+{
+   	{
+   		int ret[4];
+   		get_tuile(ret, a, b);
+
+    	for (int i = ret[0]; i <= ret[2]; i++)
+		    for (int j = ret[1]; j <= ret[3]; j++){
+				calcul_vie(i,j);
+			
+	    }
+	}
+
+	if(test_matrice == 1)
+	    cellule[a][b] = 1;
+	else
+	    cellule[a][b] = 0;
+    
+  	return 0;
+}
+
+
+// Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
 unsigned compute_v8 (unsigned nb_iter)
 { 
-  	return 2;
+  	tranche = DIM / GRAIN;
+
+  	for (unsigned test = 1; test <= nb_iter; test++) {
+  		cont = 0;
+
+  		#pragma omp parallel
+  			{
+  			#pragma omp single
+  			for (unsigned m = 0 ; m < GRAIN ; m++){
+  				for(unsigned n = 0; n < GRAIN ; n++){
+  					#pragma omp task firstprivate(m,n)
+  					cellule[m][n] = 1;
+  				}
+  			}
+  		}	
+
+  		#pragma omp parallel
+  		{
+  			#pragma omp single
+	  		for (int i=0; i < GRAIN; i++)
+	    		for (int j=0; j < GRAIN; j++){
+	    			if(cellule[i][j] == 0 
+		    			&& cellule[i][j-1] == 0 
+		    			&& cellule[i][j+1] == 0 
+		    			&& cellule[i-1][j] == 0
+		    			&& cellule[i+1][j] == 0
+		    			&& cellule[i-1][j-1] == 0
+		    			&& cellule[i-1][j+1] == 0 
+		    			&& cellule[i+1][j-1] == 0
+		    			&& cellule[i+1][j+1] == 0 )
+		    			continue;
+		    		test_matrice = 0;
+
+		    		if(i==0 && j==0)
+		    			#pragma omp task firstprivate(i,j) depend(out:cellule[i][j])
+	      				jeu_vie_v8 (i, j);
+	    			else if (i==0)
+	    				#pragma omp task firstprivate(i,j) depend(out:cellule[i][j]) depend(in:cellule[i][j-1])
+	    				jeu_vie_v8 (i, j);
+	    			else if (j==0)
+	    				#pragma omp task firstprivate(i,j) depend(out:cellule[i][j]) depend(in:cellule[i-1][j])
+	    				jeu_vie_v8 (i, j);
+	    			else
+	    				#pragma omp task firstprivate(i,j) depend(out:cellule[i][j]) depend(in:cellule[i-1][j], cellule[i][j-1])
+	    				jeu_vie_v8 (i, j);
+	    		}
+    	}
+	}
+   	swap_images ();
+
+  return cont;
 }
