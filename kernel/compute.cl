@@ -89,110 +89,132 @@ __kernel void vie_tuile(__global unsigned *in, __global unsigned *out){
   int x = get_global_id(0);
   int y = get_global_id(1);
 
-  __local unsigned tile[TILEY][TILEX];
+  __local unsigned tile[TILEY + 2][TILEX + 2];
 
   int xloc = get_local_id(0);
   int yloc = get_local_id(1);
 
-
-  tile[yloc][xloc] = in[y * DIM + x];
-
-  barrier(CLK_LOCAL_MEM_FENCE);
-
   int couleur;
+  tile[yloc + 1][xloc + 1] = in[y * DIM + x];
 
-    if (yloc == 0 && xloc == 0)
-      //Mettre les autres condition pour x et y 
-      tile[yloc-1][xloc-1] = in[(y - 1) * DIM + (x-1)];
+
+  if (yloc == 0){
+    if(y > 0){
+      tile[yloc][xloc + 1] = in[(y - 1) * DIM + x];
+      if (x > 0)
+        tile[yloc][xloc] = in[(y - 1) * DIM + (x-1)];
+      if (x < DIM - 1)
+        tile[yloc][xloc + 2] = in[(y - 1) * DIM + (x+1)];
+    }
     
-    else if(yloc == 0 && xloc == TILEX -1)
-      tile[yloc-1][xloc+1] =  in[(y - 1) * DIM + (x+1)];
-    
-    else if (yloc == 0) 
-      tile[yloc-1][xloc] =  in[(y - 1) * DIM + x];
+  }     
+  if(yloc == TILEY - 1){
+    if(y<DIM-1){
+      tile[yloc + 2][xloc + 1] = in[(y + 1) * DIM + x];
+      if (x > 0)
+        tile[yloc + 2][xloc] = in[(y + 1) * DIM + (x-1)];
+      if (x < DIM - 1)
+        tile[yloc + 2][xloc + 2] = in[(y + 1) * DIM + (x+1)];
+    }
+  }
+  if(xloc == 0){
+    if(x>0){
+      tile[yloc + 1][xloc] = in[y * DIM + (x-1)];
+      if (y > 0)
+        tile[yloc][xloc] = in[(y - 1) * DIM + (x-1)];
+      if (y < DIM - 1)
+        tile[yloc + 2][xloc] = in[(y + 1) * DIM + (x-1)];
+    }
 
-    else if (xloc == 0 && yloc == TILEY - 1)
-      tile[yloc+1][xloc-1] = in[(y+1) * DIM + (x-1)];
+  }
+  if(xloc ==  TILEX - 1){
+    if(x<DIM-1){
+      tile[yloc + 1][xloc + 2] = in[y * DIM + (x+1)];
+      if (y > 0)
+        tile[yloc][xloc + 2] = in[(y - 1) * DIM + (x+1)];
+      if (y < DIM - 1)
+        tile[yloc + 2][xloc + 2] = in[(y + 1) * DIM + (x+1)];
+    }
+  }
 
-    else if (xloc == 0)
-      tile[yloc][xloc-1] = in[y * DIM + (x-1)];
 
-    else if(xloc == TILEX-1 && yloc == TILEY-1 )
-        tile[yloc+1][xloc + 1] = in[(y+1) * DIM + (x+1)];
 
-     barrier(CLK_LOCAL_MEM_FENCE);
 
+
+  
+
+  
   if(y == 0 && x == 0){
-    couleur = (tile[yloc+1][xloc] != 0)
-      + (tile[yloc+1][xloc+1] != 0)
-      + (tile[yloc][xloc+1] != 0);
+    couleur = (tile[yloc+2][xloc+1] != 0)
+      + (tile[yloc+2][xloc+2] != 0)
+      + (tile[yloc+1][xloc+2] != 0);
   }
 
   else if(y == 0 && x == DIM-1){
-    couleur = (tile[yloc+1][xloc-1] != 0)
-      + (tile[yloc+1][xloc] != 0)
-      + (tile[yloc][xloc-1] != 0);
+    couleur = (tile[yloc+2][xloc] != 0)
+      + (tile[yloc+2][xloc+1] != 0)
+      + (tile[yloc+1][xloc] != 0);
   }
 
   else if(x == 0 && y == DIM-1){
-    couleur =  (tile[yloc-1][xloc] != 0)
-      + (tile[yloc-1][xloc+1] != 0)
-      + (tile[yloc][xloc+1] != 0);
+    couleur =  (tile[yloc][xloc+1] != 0)
+      + (tile[yloc][xloc+2] != 0)
+      + (tile[yloc+1][xloc+2] != 0);
   }
 
   else if (x == DIM-1 && y == DIM-1){
-    couleur = (tile[yloc-1][xloc-1] != 0)
-      + (tile[yloc-1][xloc] != 0)
-      + (tile[yloc][xloc-1] != 0);
+    couleur = (tile[yloc][xloc] != 0)
+      + (tile[yloc][xloc+1] != 0)
+      + (tile[yloc+1][xloc] != 0);
   }
 
   else if(x == 0){
-    couleur = (tile[yloc-1][xloc] != 0)
-      + (tile[yloc-1][xloc+1] != 0)
-      + (tile[yloc+1][xloc] != 0)
-      + (tile[yloc+1][xloc+1] != 0)
-      + (tile[yloc][xloc+1] != 0);
+    couleur = (tile[yloc][xloc+1] != 0)
+      + (tile[yloc][xloc+2] != 0)
+      + (tile[yloc+2][xloc+1] != 0)
+      + (tile[yloc+2][xloc+2] != 0)
+      + (tile[yloc+1][xloc+2] != 0);
   }
 
   else if(y == 0){
-    couleur = (tile[yloc+1][xloc-1] != 0)
+    couleur = (tile[yloc+2][xloc] != 0)
+      + (tile[yloc+2][xloc+1] != 0)
+      + (tile[yloc+2][xloc+2] != 0)
       + (tile[yloc+1][xloc] != 0)
-      + (tile[yloc+1][xloc+1] != 0)
-      + (tile[yloc][xloc-1] != 0)
-      + (tile[yloc][xloc+1] != 0);
+      + (tile[yloc+1][xloc+2] != 0);
   }
 
   else if(x == DIM-1){
-    couleur = (tile[yloc-1][xloc-1] != 0)
-      + (tile[yloc-1][xloc] != 0)
-      + (tile[yloc+1][xloc-1] != 0)
-      + (tile[yloc+1][xloc] != 0)
-      + (tile[yloc][xloc-1] != 0);
+    couleur = (tile[yloc][xloc] != 0)
+      + (tile[yloc][xloc+1] != 0)
+      + (tile[yloc+2][xloc] != 0)
+      + (tile[yloc+2][xloc+1] != 0)
+      + (tile[yloc+1][xloc] != 0);
   }
 
   else if(y == DIM-1){
-    couleur = (tile[yloc-1][xloc-1] != 0)
-      + (tile[yloc-1][xloc] != 0)
-      + (tile[yloc-1][xloc+1] != 0)
-      + (tile[yloc][xloc-1] != 0)
-      + (tile[yloc][xloc+1] != 0);
+    couleur = (tile[yloc][xloc] != 0)
+      + (tile[yloc][xloc+1] != 0)
+      + (tile[yloc][xloc+2] != 0)
+      + (tile[yloc+1][xloc] != 0)
+      + (tile[yloc+1][xloc+2] != 0);
   }
 
   else {
-    couleur=(tile[yloc-1][xloc-1] != 0)
-      + (tile[yloc-1][xloc] != 0)
-      + (tile[yloc-1][xloc+1] != 0)
-      + (tile[yloc+1][xloc-1] != 0)
+    couleur=(tile[yloc][xloc] != 0)
+      + (tile[yloc][xloc+1] != 0)
+      + (tile[yloc][xloc+2] != 0)
+      + (tile[yloc+2][xloc] != 0)
+      + (tile[yloc+2][xloc+1] != 0)
+      + (tile[yloc+2][xloc+2] != 0)
       + (tile[yloc+1][xloc] != 0)
-      + (tile[yloc+1][xloc+1] != 0)
-      + (tile[yloc][xloc-1] != 0)
-      + (tile[yloc][xloc+1] != 0);
+      + (tile[yloc+1][xloc+2] != 0);
   }
   
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if(tile[yloc][xloc] != 0)
+    if(tile[yloc+1][xloc+1] != 0)
       if(couleur == 2 || couleur == 3)
         out[y * DIM + x] = 0xFFFF00FF;
       else
@@ -202,7 +224,7 @@ __kernel void vie_tuile(__global unsigned *in, __global unsigned *out){
         out[y * DIM + x] = 0xFFFF00FF;
       else
         out[y * DIM + x] = 0;
-
+  
 }
 
 

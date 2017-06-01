@@ -14,8 +14,6 @@
 
 unsigned version = 0;
 
-void first_touch_v1 (void);
-void first_touch_v2 (void);
 
 unsigned compute_v0 (unsigned nb_iter);
 unsigned compute_v1 (unsigned nb_iter);
@@ -35,8 +33,8 @@ unsigned compute_v12 (unsigned nb_iter);
 
 void_func_t first_touch [] = {
   NULL,
-  first_touch_v1,
-  first_touch_v2,
+  NULL,
+  NULL,
   NULL,
   NULL,
   NULL,
@@ -71,10 +69,10 @@ char *version_name [] = {
   "OpenMP for optimisé",
   "OpenMP task tuiléé",
   "OpenMP task optimisé",
-  "OpenMP for simple static"
-  "OpenMP for tuile static"
-  "OpenMP for oprimisé static"
-  "OpenCL"
+  "OpenMP for simple static",
+  "OpenMP for tuile static",
+  "OpenMP for oprimisé static",
+  "OpenCL",
 };
 
 unsigned opencl_used [] = {
@@ -93,7 +91,12 @@ unsigned opencl_used [] = {
   1,
 };
 
-///////////////////////////// Version séquentielle simple
+/******************************************************************
+			Version Séquentielle simple
+*******************************************************************/
+
+
+//Fonction de calcul qui permet de savoir si une cellule est en vie ou pas 
 void calcul_vie(int i, int j){
 	int alive = 0;
 	alive = (cur_img(i-1, j-1) !=0)
@@ -134,14 +137,10 @@ unsigned compute_v0 (unsigned nb_iter)
 }
 
 
-///////////////////////////// Version OpenMP for simple
 
-void first_touch_v1 ()
-{
-  
-}
-
-// Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
+/******************************************************************
+			Version OpenMP for simple
+*******************************************************************/
 unsigned compute_v1(unsigned nb_iter)
 {
 	#pragma omp parallel
@@ -162,12 +161,10 @@ unsigned compute_v1(unsigned nb_iter)
 
 
 
-///////////////////////////// Version OpenMP avec for sans collapse
+/******************************************************************
+			Version OpenMP avec for sans collapse
+*******************************************************************/
 
-void first_touch_v2 ()
-{
-
-}
 
 // Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
 unsigned compute_v2(unsigned nb_iter)
@@ -189,12 +186,16 @@ unsigned compute_v2(unsigned nb_iter)
   return 0; 
 }
 
-///////////////////////////// Version séquentielle avec tuile
+/******************************************************************
+			Version Séquentielle avec tuile
+*******************************************************************/
 #define GRAIN 16
 unsigned tranche = 0;
 
 volatile int cont = 0;
 
+
+//Fonction qui permet d'avoir une tuile
 void get_tuile(int *ret, int i, int j){
 	ret[0] = (i == 0) ? 1 : i * tranche;
   	ret[1] = (j == 0) ? 1 : j * tranche;
@@ -205,7 +206,7 @@ void get_tuile(int *ret, int i, int j){
   
 }
 
-
+//Fonction qui permet de calculer le jeu de la vie avec des tuiles
 unsigned jeu_vie_seq (int a, int b)
 {
    	{
@@ -221,8 +222,6 @@ unsigned jeu_vie_seq (int a, int b)
   	return 0;
 }
 
-
-// Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
 unsigned compute_v3 (unsigned nb_iter)
 { 
   	tranche = DIM / GRAIN;
@@ -238,7 +237,9 @@ unsigned compute_v3 (unsigned nb_iter)
   return cont;
 }
 
-//////////////////////////version OMP for tuilé
+/******************************************************************
+			Version OMP for avec des tuiles
+*******************************************************************/
 unsigned jeu_vie_v4 (int a, int b)
 {
 
@@ -259,8 +260,6 @@ unsigned jeu_vie_v4 (int a, int b)
   	return 0;
 }
 
-
-// Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
 unsigned compute_v4 (unsigned nb_iter)
 { 
   	tranche = DIM / GRAIN;
@@ -281,8 +280,9 @@ unsigned compute_v4 (unsigned nb_iter)
 }
 
 
-//////////////////////////version séquentielle optimisé
-
+/******************************************************************
+			Version Séquentielle Optimisé
+*******************************************************************/
 volatile int test_matrice; 
 volatile int cellule[GRAIN][GRAIN+1];
 
@@ -308,8 +308,6 @@ unsigned jeu_vie_v5 (int a, int b)
   	return 0;
 }
 
-
-// Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
 unsigned compute_v5 (unsigned nb_iter)
 { 
   	tranche = DIM / GRAIN;
@@ -344,8 +342,9 @@ unsigned compute_v5 (unsigned nb_iter)
 }
 
 
-//////////////////////////version OMP for optimisé
-
+/******************************************************************
+			Version OMP for optimisé
+*******************************************************************/
 volatile int test_matrice; 
 volatile int cellule[GRAIN][GRAIN+1];
 
@@ -373,7 +372,6 @@ unsigned jeu_vie_v6 (int a, int b)
   	return 0;
 }
 
-// Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
 unsigned compute_v6 (unsigned nb_iter)
 { 
   	tranche = DIM / GRAIN;
@@ -414,8 +412,9 @@ unsigned compute_v6 (unsigned nb_iter)
   return cont;
 }
 
-//////////////////////////version OMP TASK tuilée
-
+/******************************************************************
+			Version OMP task avec tuiles
+*******************************************************************/
 int cell[GRAIN][GRAIN];
 
 
@@ -434,7 +433,6 @@ unsigned jeu_vie_v7 (int a, int b)
 }
 
 
-// Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
 unsigned compute_v7 (unsigned nb_iter)
 { 
   	tranche = DIM / GRAIN;
@@ -471,8 +469,9 @@ unsigned compute_v7 (unsigned nb_iter)
   return cont;
 }
 
-//////////////////////////version OMP TASK optimisé
-
+/******************************************************************
+			Version OMP task optimisé
+*******************************************************************/
 
 unsigned jeu_vie_v8 (int a, int b)
 {
@@ -496,7 +495,6 @@ unsigned jeu_vie_v8 (int a, int b)
 }
 
 
-// Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
 unsigned compute_v8 (unsigned nb_iter)
 { 
   	tranche = DIM / GRAIN;
@@ -553,8 +551,9 @@ unsigned compute_v8 (unsigned nb_iter)
 }
 
 
-/////////////////////OMP for simple scheduled(static)
-
+/******************************************************************
+			Version OMP for simple  schedule static 
+*******************************************************************/
 unsigned compute_v9(unsigned nb_iter)
 {
 	#pragma omp parallel
@@ -573,7 +572,10 @@ unsigned compute_v9(unsigned nb_iter)
   return 0; 
 }
 
-//////////////////OMP for tuilé schedule static 
+
+/******************************************************************
+			Version OMP for tuilé schedule static
+*******************************************************************/
 unsigned jeu_vie_v10 (int a, int b)
 {
 
@@ -595,7 +597,6 @@ unsigned jeu_vie_v10 (int a, int b)
 }
 
 
-// Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
 unsigned compute_v10 (unsigned nb_iter)
 { 
   	tranche = DIM / GRAIN;
@@ -615,8 +616,9 @@ unsigned compute_v10 (unsigned nb_iter)
   return cont;
 }
 
-//////////////////////////////////OMP for optimisé static
-
+/******************************************************************
+			Version OMP for optimisé schedule static
+*******************************************************************/
 unsigned jeu_vie_v11 (int a, int b)
 {
 	int ret[4];
@@ -640,7 +642,6 @@ unsigned jeu_vie_v11 (int a, int b)
   	return 0;
 }
 
-// Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
 unsigned compute_v11 (unsigned nb_iter)
 { 
   	tranche = DIM / GRAIN;
@@ -681,7 +682,9 @@ unsigned compute_v11 (unsigned nb_iter)
   return cont;
 }
 
-/////////////////////////Implémentation OPENCL
+/******************************************************************
+			Version OpenCL
+*******************************************************************/
 unsigned compute_v12(unsigned nb_iter){
 	return ocl_compute(nb_iter);
 }
