@@ -1,0 +1,13 @@
+"Séquentielle",   0
+  "OpenMP for simple", 1
+  "OpenMP for sans collapse", 2
+  "Séquentielle avec tuile", 3
+  "OpenMP for avec tuile", 4
+  "Séquentielle optimisé", 5
+  "OpenMP for optimisé", 6
+  "OpenMP task tuiléé", 7
+  "OpenMP task optimisé", 8
+  "OpenMP for simple static", 9
+  "OpenMP for tuile static", 10
+  "OpenMP for oprimisé static", 11
+  "OpenCL",12
