@@ -97,7 +97,8 @@ unsigned opencl_used [] = {
 
 
 //Fonction de calcul qui permet de savoir si une cellule est en vie ou pas 
-void calcul_vie(int i, int j){
+int calcul_vie(int i, int j){
+	int tmp = 0;
 	int alive = 0;
 	alive = (cur_img(i-1, j-1) !=0)
 	  + (cur_img(i-1, j) != 0)
@@ -109,19 +110,24 @@ void calcul_vie(int i, int j){
 	  + (cur_img(i+1, j+1) !=0);
 
 	if(cur_img(i,j) != 0){
-	  if ((alive == 2) || (alive == 3))
+	  if ((alive == 2) || (alive == 3)){
 	    next_img(i,j) = 0xFFFF00FF;
+            tmp =1;
+	  }
 	  else
 	    next_img(i,j) = 0;
 	}
 	else{
 	  if(alive == 3)
 	    next_img(i,j) = 0xFFFF00FF;
-	  else
+	  else{
 	    next_img(i,j) = 0;
+	    tmp = 1;
+	  }
 	}
 	
 	alive = 0;
+	return tmp;
 }
 
 unsigned compute_v0 (unsigned nb_iter)
@@ -295,8 +301,10 @@ unsigned jeu_vie_v5 (int a, int b)
 
     	for (int i = ret[0]; i <= ret[2]; i++)
 		    for (int j = ret[1]; j <= ret[3]; j++){
+			    if(test_matrice==1)
 				calcul_vie(i,j);
-			
+			    else
+				test_matrice = calcul_vie(i,j);
 	    }
 	}
 
@@ -351,6 +359,7 @@ volatile int cellule[GRAIN][GRAIN+1];
 
 unsigned jeu_vie_v6 (int a, int b)
 {
+	
 	int ret[4];
    	get_tuile(ret, a, b);
 
@@ -359,7 +368,10 @@ unsigned jeu_vie_v6 (int a, int b)
    		#pragma omp for collapse(2)
     	for (int i = ret[0]; i <= ret[2]; i++)
 		    for (int j = ret[1]; j <= ret[3]; j++){
+			    if(test_matrice == 1)
 				calcul_vie(i,j);
+			    else
+				test_matrice = calcul_vie(i,j);
 			
 	    }
 	}
@@ -481,7 +493,10 @@ unsigned jeu_vie_v8 (int a, int b)
 
     	for (int i = ret[0]; i <= ret[2]; i++)
 		    for (int j = ret[1]; j <= ret[3]; j++){
+			   if(test_matrice==1)
 				calcul_vie(i,j);
+			    else
+				test_matrice = calcul_vie(i,j);
 			
 	    }
 	}
