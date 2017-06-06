@@ -91,14 +91,21 @@ unsigned opencl_used [] = {
   1,
 };
 
+#define GRAIN 16
+unsigned tranche = 0;
+
+volatile int cont = 0;
+
+volatile int test_matrice; 
+volatile int cellule[GRAIN][GRAIN+1];
+
 /******************************************************************
 			Version Séquentielle simple
 *******************************************************************/
 
 
 //Fonction de calcul qui permet de savoir si une cellule est en vie ou pas 
-int calcul_vie(int i, int j){
-	int tmp = 0;
+void calcul_vie(int i, int j){
 	int alive = 0;
 	alive = (cur_img(i-1, j-1) !=0)
 	  + (cur_img(i-1, j) != 0)
@@ -112,7 +119,7 @@ int calcul_vie(int i, int j){
 	if(cur_img(i,j) != 0){
 	  if ((alive == 2) || (alive == 3)){
 	    next_img(i,j) = 0xFFFF00FF;
-            tmp =1;
+            test_matrice =1;
 	  }
 	  else
 	    next_img(i,j) = 0;
@@ -122,12 +129,11 @@ int calcul_vie(int i, int j){
 	    next_img(i,j) = 0xFFFF00FF;
 	  else{
 	    next_img(i,j) = 0;
-	    tmp = 1;
+	    test_matrice = 1;
 	  }
 	}
 	
 	alive = 0;
-	return tmp;
 }
 
 unsigned compute_v0 (unsigned nb_iter)
@@ -195,10 +201,7 @@ unsigned compute_v2(unsigned nb_iter)
 /******************************************************************
 			Version Séquentielle avec tuile
 *******************************************************************/
-#define GRAIN 16
-unsigned tranche = 0;
 
-volatile int cont = 0;
 
 
 //Fonction qui permet d'avoir une tuile
@@ -289,8 +292,7 @@ unsigned compute_v4 (unsigned nb_iter)
 /******************************************************************
 			Version Séquentielle Optimisé
 *******************************************************************/
-volatile int test_matrice; 
-volatile int cellule[GRAIN][GRAIN+1];
+
 
 
 unsigned jeu_vie_v5 (int a, int b)
@@ -301,10 +303,7 @@ unsigned jeu_vie_v5 (int a, int b)
 
     	for (int i = ret[0]; i <= ret[2]; i++)
 		    for (int j = ret[1]; j <= ret[3]; j++){
-			    if(test_matrice==1)
-				calcul_vie(i,j);
-			    else
-				test_matrice = calcul_vie(i,j);
+			     calcul_vie(i,j);
 	    }
 	}
 
@@ -353,8 +352,7 @@ unsigned compute_v5 (unsigned nb_iter)
 /******************************************************************
 			Version OMP for optimisé
 *******************************************************************/
-volatile int test_matrice; 
-volatile int cellule[GRAIN][GRAIN+1];
+
 
 
 unsigned jeu_vie_v6 (int a, int b)
@@ -368,10 +366,7 @@ unsigned jeu_vie_v6 (int a, int b)
    		#pragma omp for collapse(2)
     	for (int i = ret[0]; i <= ret[2]; i++)
 		    for (int j = ret[1]; j <= ret[3]; j++){
-			    if(test_matrice == 1)
-				calcul_vie(i,j);
-			    else
-				test_matrice = calcul_vie(i,j);
+			    calcul_vie(i,j);
 			
 	    }
 	}
@@ -493,10 +488,7 @@ unsigned jeu_vie_v8 (int a, int b)
 
     	for (int i = ret[0]; i <= ret[2]; i++)
 		    for (int j = ret[1]; j <= ret[3]; j++){
-			   if(test_matrice==1)
-				calcul_vie(i,j);
-			    else
-				test_matrice = calcul_vie(i,j);
+			   calcul_vie(i,j);
 			
 	    }
 	}
